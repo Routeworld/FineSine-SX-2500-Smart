@@ -1,0 +1,366 @@
+esphome:
+  name: finesine-ups-smart
+  friendly_name: FineSine SX-2500 Smart
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+ota:
+  platform: esphome
+
+logger:
+
+web_server:
+  port: 80
+  version: 3
+  include_internal: true
+  css_url: "https://cdn.jsdelivr.net/gh/jenil/chota@latest/dist/chota.min.css"   # ← вот эта строчка даёт красивый современный вид
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Moscow
+
+# ====================== РЕЛЕ И СВИЧИ ======================
+switch:
+  - platform: gpio
+    pin: GPIO25
+    name: "Контактор сети"
+    id: contactor
+    restore_mode: ALWAYS_OFF
+    icon: "mdi:electric-switch"
+
+  - platform: template
+    name: "Ночная зарядка (23:00–07:00)"
+    id: night_charge_switch
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: 'return id(night_charge_enabled);'
+    turn_on_action:
+      - globals.set:
+          id: night_charge_enabled
+          value: 'true'
+    turn_off_action:
+      - globals.set:
+          id: night_charge_enabled
+          value: 'false'
+    icon: "mdi:weather-night"
+
+  - platform: template
+    name: "Авто-переключение при АКБ < 25%"
+    id: low_battery_switch
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: 'return id(low_battery_switch_enabled);'
+    turn_on_action:
+      - globals.set:
+          id: low_battery_switch_enabled
+          value: 'true'
+    turn_off_action:
+      - globals.set:
+          id: low_battery_switch_enabled
+          value: 'false'
+    icon: "mdi:battery-alert"
+
+  - platform: template
+    name: "Принудительно на сеть (авария)"
+    id: force_grid_switch
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: 'return id(force_grid);'
+    turn_on_action:
+      - globals.set:
+          id: force_grid
+          value: 'true'
+    turn_off_action:
+      - globals.set:
+          id: force_grid
+          value: 'false'
+    icon: "mdi:alert-octagon"
+
+  - platform: gpio
+    pin: GPIO27
+    name: "Зуммер"
+    id: buzzer
+    restore_mode: ALWAYS_OFF
+    icon: "mdi:volume-high"
+
+# ====================== ГЛОБАЛЬНЫЕ ======================
+globals:
+  - id: night_charge_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+  - id: low_battery_switch_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+  - id: force_grid
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: estimated_capacity_wh
+    type: float
+    restore_value: yes
+    initial_value: '2160.0'
+  - id: test_start_voltage
+    type: float
+    restore_value: no
+    initial_value: '0.0'
+  - id: test_start_percent
+    type: float
+    restore_value: no
+    initial_value: '0.0'
+
+# ====================== КНОПКА ТЕСТА ======================
+button:
+  - platform: template
+    name: "Запустить тест батареи 5 мин"
+    id: start_battery_test
+    icon: "mdi:battery-check"
+    on_press:
+      - if:
+          condition:
+            lambda: 'return id(mains_online).state && id(battery_percent).state >= 70;'
+          then:
+            - logger.log: "Запуск теста батареи..."
+            - switch.turn_off: contactor
+            - delay: 10s
+            - globals.set:
+                id: test_start_voltage
+                value: !lambda 'return id(battery_voltage).state;'
+            - globals.set:
+                id: test_start_percent
+                value: !lambda 'return id(battery_percent).state;'
+            - delay: 300s
+            - lambda: |-
+                float end_v = id(battery_voltage).state;
+                float end_percent = id(battery_percent).state;
+                float delta_percent = id(test_start_percent) - end_percent;
+                if (delta_percent <= 0.2) {
+                  ESP_LOGW("test", "Разряд слишком мал (%.2f%%) — тест не удался", delta_percent);
+                  return;
+                }
+                float time_hours = 5.0 / 60.0;
+                float avg_voltage = (id(test_start_voltage) + end_v) / 2.0;
+                float discharged_wh = id(current_output).state * avg_voltage * time_hours;
+                float new_capacity = discharged_wh / (delta_percent / 100.0);
+                id(estimated_capacity_wh) = new_capacity;
+                std::string msg = "Тест завершён. Новая ёмкость: " + to_string((int)new_capacity) + " Wh";
+                ESP_LOGI("test", "%s", msg.c_str());
+            - switch.turn_on: contactor
+          else:
+            - logger.log: "Тест пропущен (сеть offline или заряд <70%)"
+
+# ====================== СЕНСОРЫ ======================
+sensor:
+  - platform: adc
+    pin: GPIO34
+    name: "Напряжение АКБ (V)"
+    id: battery_voltage
+    update_interval: 5s
+    filters:
+      - multiply: 11.0
+      - calibrate_linear:
+          - 22.0 -> 0
+          - 28.8 -> 100
+    unit_of_measurement: "V"
+    icon: "mdi:car-battery"
+
+  - platform: template
+    name: "Заряд АКБ (%)"
+    id: battery_percent
+    lambda: |-
+      float v = id(battery_voltage).state;
+      if (v <= 22) return 0;
+      if (v >= 28.8) return 100;
+      return (v - 22) / (28.8 - 22) * 100;
+    update_interval: 10s
+    unit_of_measurement: "%"
+    icon: "mdi:battery"
+
+  - platform: adc
+    pin: GPIO35
+    name: "Напряжение сети 220В"
+    id: network_voltage
+    filters:
+      - multiply: 460
+      - lambda: |-
+          if (x > 100) return x; else return 0;
+    unit_of_measurement: "V"
+    icon: "mdi:power-plug"
+
+  - platform: adc
+    pin: GPIO32
+    name: "Ток вход A"
+    id: current_input
+    filters:
+      - multiply: 30.0
+      - offset: -0.02
+    unit_of_measurement: "A"
+    icon: "mdi:current-ac"
+
+  - platform: adc
+    pin: GPIO33
+    name: "Ток выход A"
+    id: current_output
+    filters:
+      - multiply: 30.0
+      - offset: -0.02
+    unit_of_measurement: "A"
+    icon: "mdi:current-ac"
+
+  - platform: template
+    name: "Мощность вход (Вт)"
+    id: power_input
+    lambda: 'return id(network_voltage).state * id(current_input).state * 0.95;'
+    unit_of_measurement: "W"
+    icon: "mdi:transmission-tower-import"
+
+  - platform: template
+    name: "Мощность выход (Вт)"
+    id: power_output
+    lambda: 'return id(network_voltage).state * id(current_output).state * 0.92;'
+    unit_of_measurement: "W"
+    icon: "mdi:flash"
+
+  - platform: template
+    name: "КПД ИБП (%)"
+    id: ups_kpd
+    lambda: |-
+      float pin = id(power_input).state;
+      float pout = id(power_output).state;
+      if (pin <= 5.0) return 0.0;
+      return (pout / pin * 100.0);
+    update_interval: 10s
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+    icon: "mdi:percent"
+
+  - platform: total_daily_energy
+    name: "Потреблено за сегодня kWh"
+    id: daily_energy_today
+    power_id: power_output
+    unit_of_measurement: "kWh"
+    state_class: total_increasing
+    device_class: energy
+    accuracy_decimals: 3
+    icon: "mdi:lightning-bolt-circle"
+    filters:
+      - multiply: 0.001
+
+  - platform: template
+    name: "Осталось мин на батарее"
+    id: remaining_runtime_minutes
+    unit_of_measurement: "min"
+    icon: "mdi:battery-clock"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      float percent = id(battery_percent).state;
+      float power = id(power_output).state;
+      float usable_wh = id(estimated_capacity_wh);
+      if (power <= 5.0) return 9999;
+      if (percent <= 5.0) return 0;
+      float effective_power = power / 0.92;
+      float minutes = (percent / 100.0) * usable_wh / effective_power * 60.0;
+      if (minutes > 9999) minutes = 9999;
+      return (int)minutes;
+
+  - platform: uptime
+    name: "Аптайм ESP32 (с)"
+    unit_of_measurement: "s"
+    icon: "mdi:clock-outline"
+
+  - platform: template
+    name: "Время на батарее сегодня мин"
+    id: battery_runtime_today_min
+    unit_of_measurement: "min"
+    icon: "mdi:battery-charging-wireless-outline"
+    update_interval: 60s
+    lambda: |-
+      static float accumulated_minutes = 0.0;
+      static bool was_on_battery = false;
+      bool now_on_battery = (id(mains_online).state == false);
+      if (now_on_battery && id(contactor).state == false) {
+        if (was_on_battery) {
+          accumulated_minutes += 1.0;
+        }
+        was_on_battery = true;
+      } else {
+        was_on_battery = false;
+      }
+      return accumulated_minutes;
+
+  - platform: template
+    name: "Здоровье батареи SOH %"
+    id: battery_soh
+    unit_of_measurement: "%"
+    icon: "mdi:heart-pulse"
+    lambda: |-
+      float nominal = 2400.0;
+      float estimated = id(estimated_capacity_wh);
+      if (estimated <= 0) return 100.0;
+      return (estimated / nominal) * 100.0;
+
+# ====================== БИНАРНЫЕ ======================
+binary_sensor:
+  - platform: template
+    name: "Сеть онлайн"
+    id: mains_online
+    lambda: 'return id(network_voltage).state > 100;'
+    icon: "mdi:power-plug"
+
+# ====================== АВТОМАТИКА ======================
+interval:
+  - interval: 30s
+    then:
+      - if:
+          condition:
+            lambda: |-
+              auto now = id(sntp_time).now();
+              bool is_night = (now.hour >= 23 || now.hour < 7);
+              if (id(force_grid)) return true;
+              if (id(battery_percent).state < 25 && id(low_battery_switch_enabled)) return true;
+              if (is_night && id(night_charge_enabled)) return true;
+              return false;
+          then:
+            - switch.turn_on: contactor
+          else:
+            - switch.turn_off: contactor
+
+  - interval: 2s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(mains_online).state == false && id(battery_percent).state < 20;'
+          then:
+            - switch.turn_on: buzzer
+            - delay: 200ms
+            - switch.turn_off: buzzer
+          else:
+            - switch.turn_off: buzzer
+
+  - interval: 60s
+    then:
+      - if:
+          condition:
+            lambda: |-
+              auto now = id(sntp_time).now();
+              return now.hour == 0 && now.minute == 0 && now.second < 10;
+          then:
+            - lambda: 'id(battery_runtime_today_min).publish_state(0.0);'
+
+  - interval: 7d
+    then:
+      - if:
+          condition:
+            lambda: 'return id(mains_online).state && id(battery_percent).state >= 70;'
+          then:
+            - button.press: start_battery_test
+          else:
+            - logger.log: "Авто-тест пропущен: сеть offline или заряд <70%"
