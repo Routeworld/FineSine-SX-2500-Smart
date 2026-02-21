@@ -1,0 +1,73 @@
+/* Общий фон и шрифт */
+body {
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  color: #e0e0ff;
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 10px;
+}
+
+/* Заголовок */
+h1, h2 {
+  color: #00d4ff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+  text-align: center;
+}
+
+/* Блоки сенсоров */
+section, .sensor, .control {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 15px;
+  margin: 12px 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+}
+
+/* Иконки и статусы */
+.icon {
+  font-size: 1.8em;
+  margin-right: 10px;
+}
+
+/* Прогресс-бары (АКБ, КПД и т.д.) */
+progress, meter {
+  height: 18px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.3);
+}
+progress::-webkit-progress-value, meter::-webkit-meter-bar {
+  background: linear-gradient(to right, #ff6b6b, #4ecdc4);
+  border-radius: 10px;
+}
+
+/* Красный для аварий и отрицательного напряжения */
+[Napryazhenie_AKB*="-"] .value,
+.zummer.ON,
+.kontaktor.off {
+  color: #ff4757 !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px #ff4757;
+}
+
+/* Зелёный для OK */
+.soh.high, .online {
+  color: #2ecc71 !important;
+}
+
+/* Ток и мощность — акцент */
+.current, .power {
+  font-size: 1.4em;
+  color: #feca57;
+}
+
+/* Лог внизу прячем или делаем маленьким */
+.debug-log {
+  font-size: 0.8em;
+  max-height: 150px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.5);
+  border-radius: 12px;
+  padding: 10px;
+}
