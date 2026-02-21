@@ -2,7 +2,7 @@
 
 **Превращаем обычный бюджетный ИБП в умный домашний энергомонстр с мониторингом, ночной зарядкой и самообучающимся прогнозом автономности**
 
-![Project banner]()  
+![Project banner](https://styles.redditmedia.com/t5_3bekp/styles/communityIcon_a1sc94rahuob1.png?width=128&frame=1&auto=webp&s=347c68a019bd7ff46704df2d15efc382e5c069f7)  
 *(скоро будет красивая обложка с нашим FineSine и ESP32)*
 
 ## О проекте
