@@ -1,0 +1,144 @@
+blueprint:
+  name: Умный ИБП ExeGate SX-2500 (ESP32) — Уведомления + Бесшовное управление
+  description: >
+    Адаптировано специально для RouteMedia ❤️
+    Уведомления с debounce: изменение статуса сети, падение заряда по шагам,
+    автоматическое переключение на сеть при низком заряде.
+  domain: automation
+  input:
+    battery_percent:
+      name: Сенсор процента заряда АКБ
+      selector:
+        entity:
+          domain: sensor
+    battery_voltage:
+      name: Сенсор напряжения АКБ
+      selector:
+        entity:
+          domain: sensor
+    mains_online:
+      name: Сенсор «Сеть онлайн» (binary_sensor)
+      selector:
+        entity:
+          domain: binary_sensor
+    contactor_switch:
+      name: Контактор / реле на входе 220В (для авто-переключения)
+      selector:
+        entity:
+          domain: switch
+    low_battery_threshold:
+      name: Критический уровень заряда (%)
+      default: 25
+      selector:
+        number:
+          min: 10
+          max: 40
+          step: 5
+    report_interval:
+      name: Шаг уведомлений по заряду (%)
+      default: 10
+      selector:
+        number:
+          min: 5
+          max: 25
+          step: 5
+    debounce_seconds:
+      name: Debounce (секунды)
+      default: 15
+      selector:
+        number:
+          min: 5
+          max: 60
+          step: 1
+    notify_device:
+      name: Устройство для уведомлений
+      selector:
+        device:
+          filter:
+            integration: mobile_app
+    high_priority:
+      name: Высокий приоритет уведомлений
+      default: true
+      selector:
+        boolean:
+    message_prefix:
+      name: Префикс уведомлений
+      default: "🛡️ ИБП:"
+      selector:
+        text:
+
+variables:
+  battery_percent: !input battery_percent
+  battery_voltage: !input battery_voltage
+  mains_online: !input mains_online
+  contactor: !input contactor_switch
+  low_threshold: !input low_battery_threshold
+  report_interval: !input report_interval
+  debounce: !input debounce_seconds
+  prefix: !input message_prefix
+  high_prio: !input high_priority
+  current_charge: "{{ states(battery_percent) | int(100) }}"
+  charge_mod: "{{ current_charge % report_interval }}"
+
+trigger:
+  - platform: state
+    entity_id: !input battery_percent
+    id: battery_change
+    for:
+      seconds: !input debounce_seconds
+  - platform: state
+    entity_id: !input mains_online
+    id: status_change
+    for:
+      seconds: !input debounce_seconds
+
+condition:
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.id == 'status_change' }}"
+      - condition: template
+        value_template: >
+          {{ trigger.id == 'battery_change'
+             and current_charge < 100
+             and charge_mod == 0 }}
+
+action:
+  # Автоматическое переключение на сеть при низком заряде
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input battery_percent
+            below: !input low_battery_threshold
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input contactor_switch
+
+  # Уведомления
+  - variables:
+      notify_message: >
+        {% if trigger.id == 'battery_change' %}
+          {{ prefix }} Батарея {{ current_charge }}% • {{ states(battery_voltage) }} В
+        {% else %}
+          {{ prefix }} Сеть {{ '✅ Онлайн' if is_state(mains_online, 'on') else '⚡ На батарее' }}
+        {% endif %}
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ high_prio }}"
+        sequence:
+          - service: notify.mobile_app_{{ device_id }}
+            data:
+              message: "{{ notify_message }}"
+              data:
+                priority: high
+                ttl: 0
+    default:
+      - service: notify.mobile_app_{{ device_id }}
+        data:
+          message: "{{ notify_message }}"
+
+mode: queued
+max: 10
