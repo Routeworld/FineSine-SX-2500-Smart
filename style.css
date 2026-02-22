@@ -1,68 +1,53 @@
-/* === ГогиGPT для RouteMedia — стиль как в HA-треде 599717 ❤️ === */
+/* ГогиGPT v3 enhancement для RouteMedia — синий акцент + glass + dark/light switch ❤️ */
 :root {
-  --bg: #0a0f1c;
-  --card: rgba(20, 25, 45, 0.75);
-  --accent: #00d4ff;
-  --success: #00ff9d;
-  --danger: #ff2d55;
-  --text: #e0f2fe;
+  --esphome-primary-color: #00d4ff;          /* твой любимый синий неон */
+  --esphome-accent-color: #00f5ff;
+  --esphome-danger-color: #ff2d55;
+  --esphome-success-color: #00ff9d;
 }
+
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  margin: 0;
-  padding: 20px 15px;
-  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1c, #1e3a8a); /* космос-фон */
 }
-h1 {
-  color: var(--accent);
-  text-align: center;
-  font-size: 2.4em;
-  margin: 0 0 25px;
-  text-shadow: 0 0 25px rgba(0,212,255,0.7);
+
+/* Усиливаем glassmorphism карточек */
+ha-card, .card, section, [class*="group-"] {
+  background: rgba(30, 40, 70, 0.4) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5) !important;
+  transition: all 0.3s ease;
 }
-.card, section, .sensor, .control {
-  background: var(--card);
-  border-radius: 24px;
-  padding: 20px;
-  margin: 18px 0;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+
+ha-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 212, 255, 0.25) !important;
 }
-.sensor, .control {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
+
+/* Большие значения + цвета */
+.state-value {
+  font-size: 1.8em !important;
+  font-weight: 700 !important;
 }
-.value {
-  font-size: 1.75em;
-  font-weight: 700;
-  min-width: 130px;
-  text-align: right;
+
+.negative-value, [data-state="-"] .state-value, .zummer-on {
+  color: var(--esphome-danger-color) !important;
+  text-shadow: 0 0 10px var(--esphome-danger-color);
+  animation: pulse 1.5s infinite;
 }
-.value.negative, .zummer.ON { color: var(--danger) !important; }
-.online, .soh.high { color: var(--success) !important; }
-progress {
-  height: 26px;
-  border-radius: 9999px;
-  background: rgba(255,255,255,0.08);
+
+@keyframes pulse { 0%,100% {opacity:1;} 50% {opacity:0.7;} }
+
+/* Прогресс-бары красивее */
+ha-progress-bar, progress {
+  --mdc-theme-primary: var(--esphome-accent-color) !important;
+  height: 24px !important;
+  border-radius: 12px !important;
 }
-progress::-webkit-progress-value {
-  background: linear-gradient(90deg, var(--accent), var(--success));
-}
-.debug-log {
-  font-size: 0.82em;
-  background: rgba(10,15,28,0.9);
-  border-radius: 20px;
-  padding: 18px;
-  max-height: 220px;
-  overflow-y: auto;
-  margin-top: 30px;
-}
-@media (max-width: 640px) {
-  .sensor, .control { flex-direction: column; }
-  .value { text-align: left; width: 100%; }
+
+/* Светлая тема (если включишь) */
+@media (prefers-color-scheme: light) {
+  body { background: linear-gradient(135deg, #e0f2fe, #bae6fd); }
+  ha-card { background: rgba(255,255,255,0.65) !important; border: 1px solid rgba(0,0,0,0.1); }
 }
