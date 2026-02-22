@@ -1,31 +1,32 @@
-/* 🌸 RouteMedia Light Dream — нежная светлая тема для ESPHome v3 ❤️ */
+/* 🌸 RouteMedia Light Dream v3 — нежная светлая тема для ESPHome ❤️ */
 
 :root {
-  --primary-color: #00b4d8;
+  --primary-color: #00b4d8;         /* твой любимый нежный голубой */
   --accent-color: #00d4ff;
   --success-color: #00c853;
   --danger-color: #ff5252;
   --text-primary: #1e3a5f;
-  --card-background: rgba(255, 255, 255, 0.95);
-  --background: linear-gradient(135deg, #e0f7fa, #f0f9ff);
+  --card-bg: rgba(255, 255, 255, 0.94);
+  --shadow-color: rgba(0, 180, 216, 0.15);
 }
 
 body {
-  background: var(--background) !important;
+  background: linear-gradient(135deg, #e0f7fa, #f0f9ff, #e3f2fd) !important;
   color: var(--text-primary) !important;
+  font-family: system-ui, sans-serif;
 }
 
-ha-card, .card, section {
-  background: var(--card-background) !important;
+ha-card, .card, section, .group {
+  background: var(--card-bg) !important;
   border-radius: 24px !important;
-  border: 1px solid rgba(0, 180, 216, 0.2) !important;
-  box-shadow: 0 12px 32px rgba(0, 180, 216, 0.15) !important;
+  border: 1px solid rgba(0, 180, 216, 0.18) !important;
+  box-shadow: 0 12px 32px var(--shadow-color) !important;
   backdrop-filter: blur(20px) !important;
-  transition: all 0.4s ease;
+  transition: all 0.35s ease;
 }
 
 ha-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-5px);
   box-shadow: 0 20px 45px rgba(0, 180, 216, 0.25) !important;
 }
 
@@ -37,16 +38,23 @@ ha-card:hover {
 
 ha-progress-bar {
   --mdc-theme-primary: var(--accent-color) !important;
-  height: 28px !important;
-  border-radius: 14px !important;
+  height: 26px !important;
+  border-radius: 13px !important;
+  background: rgba(0,180,216,0.1) !important;
 }
 
 button, ha-button {
-  border-radius: 50px !important;
-  box-shadow: 0 6px 16px rgba(0, 180, 216, 0.3) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 12px rgba(0,180,216,0.25) !important;
+  transition: all 0.3s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,180,216,0.35) !important;
 }
 
 .header {
-  background: rgba(255,255,255,0.9) !important;
+  background: rgba(255,255,255,0.88) !important;
   backdrop-filter: blur(16px) !important;
 }
