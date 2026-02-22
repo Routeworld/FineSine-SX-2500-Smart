@@ -1,53 +1,81 @@
-/* ГогиGPT v3 enhancement для RouteMedia — синий акцент + glass + dark/light switch ❤️ */
-:root {
-  --esphome-primary-color: #00d4ff;          /* твой любимый синий неон */
-  --esphome-accent-color: #00f5ff;
-  --esphome-danger-color: #ff2d55;
-  --esphome-success-color: #00ff9d;
-}
-
+/* Глобальный стиль - светлый фон, sans-serif шрифт */
 body {
-  background: linear-gradient(135deg, #0a0f1c, #1e3a8a); /* космос-фон */
+  background-color: #f5f5f5;
+  color: #333;
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
-/* Усиливаем glassmorphism карточек */
-ha-card, .card, section, [class*="group-"] {
-  background: rgba(30, 40, 70, 0.4) !important;
-  backdrop-filter: blur(16px) saturate(180%) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-  border-radius: 20px !important;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5) !important;
-  transition: all 0.3s ease;
+/* Зелёный хедер как у APC */
+header, .header, nav, .top-bar {
+  background-color: #006633 !important;  /* тёмно-зелёный APC */
+  color: white !important;
+  padding: 10px 20px !important;
+  border-bottom: 4px solid #004d26 !important;
 }
 
-ha-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(0, 212, 255, 0.25) !important;
+/* Логотип/название - центрируем */
+h1, .title {
+  color: white !important;
+  text-align: center;
+  margin: 0;
 }
 
-/* Большие значения + цвета */
-.state-value {
-  font-size: 1.8em !important;
-  font-weight: 700 !important;
+/* Контейнеры статусов - карточки как в APC */
+section, .status, .card {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin: 15px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.negative-value, [data-state="-"] .state-value, .zummer-on {
-  color: var(--esphome-danger-color) !important;
-  text-shadow: 0 0 10px var(--esphome-danger-color);
-  animation: pulse 1.5s infinite;
+/* Таблицы/списки сенсоров - APC-стиль */
+table, .sensor-list, dl {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-@keyframes pulse { 0%,100% {opacity:1;} 50% {opacity:0.7;} }
-
-/* Прогресс-бары красивее */
-ha-progress-bar, progress {
-  --mdc-theme-primary: var(--esphome-accent-color) !important;
-  height: 24px !important;
-  border-radius: 12px !important;
+th, dt {
+  background: #e0f0e0;  /* светло-зелёный */
+  color: #006633;
+  padding: 10px;
+  text-align: left;
+  font-weight: bold;
 }
 
-/* Светлая тема (если включишь) */
-@media (prefers-color-scheme: light) {
-  body { background: linear-gradient(135deg, #e0f2fe, #bae6fd); }
-  ha-card { background: rgba(255,255,255,0.65) !important; border: 1px solid rgba(0,0,0,0.1); }
+td, dd {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Зелёный статус "No Alarms" / OK */
+.status-ok, .binary_sensor.on, .good {
+  color: #006633 !important;
+  font-weight: bold;
+}
+
+/* Красный для тревог */
+.status-error, .binary_sensor.off {
+  color: #cc0000 !important;
+}
+
+/* Сенсоры с иконками - увеличим */
+.sensor-value {
+  font-size: 1.4em;
+  font-weight: bold;
+}
+
+/* Чекбоксы/свитчи - зелёный акцент */
+input[type="checkbox"]:checked, .switch.on {
+  accent-color: #006633 !important;
+}
+
+/* Для runtime remaining - большой и заметный */
+#runtime_remaining {
+  font-size: 2em;
+  color: #006633;
+  text-align: center;
 }
